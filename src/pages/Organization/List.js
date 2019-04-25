@@ -1,15 +1,24 @@
-import React, { Fragment, PureComponent } from 'react';
+import React, { Fragment, useEffect, useState } from 'react';
 import { Card, Table } from 'antd';
 import moment from 'moment';
 import Link from 'umi/link';
-import { connect } from 'dva';
+import { fetchOrganizations } from '@/services/api';
+import usePromise from '@/utils/usePromise';
 
-@connect(({ loading, organizations }) => ({
-  loading: loading.effects['organizations/fetch'],
-  organizations,
-}))
-class List extends PureComponent {
-  columns = [
+function List() {
+  const roleToString = role => {
+    switch (role) {
+      case 'requester':
+        return '请求方';
+      case 'responder':
+        return '提供方';
+      case 'both':
+        return '请求方，提供方';
+      default:
+        return '';
+    }
+  };
+  const columns = [
     {
       title: '#',
       dataIndex: 'id',
@@ -27,7 +36,7 @@ class List extends PureComponent {
     },
     {
       title: '角色',
-      render: (_, record) => this.roleToString(record.role),
+      render: (_, record) => roleToString(record.role),
       key: 'role',
     },
     {
@@ -37,48 +46,37 @@ class List extends PureComponent {
     },
     {
       title: '操作',
-      render: (text, record) =>
+      render: (text, record) => (
         <Fragment>
-          <Link to={`/organizations/${record.namespace}`}>
-            查看
-          </Link>
-        </Fragment>,
+          <Link to={`/organizations/${record.namespace}`}>查看</Link>
+        </Fragment>
+      ),
       key: 'operations',
     },
   ];
 
-  componentDidMount () {
-    const { dispatch } = this.props;
-    dispatch({
-      type: 'organizations/fetch',
-    });
-  }
-
-  roleToString = (role) => {
-    switch (role) {
-      case 'requester':
-        return '请求方';
-      case 'responder':
-        return '提供方';
-      case 'both':
-        return '请求方，提供方';
-      default:
-        return '';
-    }
+  const request = function request() {
+    return fetchOrganizations();
   };
+  const { fetchUser, loading } = usePromise(request);
+  const [organizations, setOrganizations] = useState([]);
 
-  render () {
-    const { organizations, loading } = this.props;
-    return (
-      <Card title='企业列表'>
-        <Table
-          columns={this.columns}
-          dataSource={organizations.organizations}
-          rowKey={record => record.id}
-          loading={loading}
-        />
-      </Card>);
-  }
+  useEffect(() => {
+    fetchUser().then(data => {
+      setOrganizations(data);
+    });
+  }, []);
+
+  return (
+    <Card title="企业列表">
+      <Table
+        columns={columns}
+        dataSource={organizations}
+        rowKey={record => record.id}
+        loading={loading}
+      />
+    </Card>
+  );
 }
 
 export default List;

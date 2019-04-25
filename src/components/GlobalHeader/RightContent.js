@@ -6,12 +6,8 @@ import SelectLang from '../SelectLang';
 import styles from './index.less';
 
 export default class GlobalHeaderRight extends PureComponent {
-  render () {
-    const {
-      currentUser,
-      onMenuClick,
-      theme,
-    } = this.props;
+  render() {
+    const { currentUser, onMenuClick, theme } = this.props;
     const menu = (
       <Menu className={styles.menu} selectedKeys={[]} onClick={onMenuClick}>
         <Menu.Item key="logout">
@@ -41,7 +37,9 @@ export default class GlobalHeaderRight extends PureComponent {
         ) : (
           <Spin size="small" style={{ marginLeft: 8, marginRight: 8 }} />
         )}
-        <SelectLang className={styles.action} />
+        <span style={{ backgroundColor: 'black', height: '64px', padding: '25px 0' }}>
+          <SelectLang className={styles.action} />
+        </span>
       </div>
     );
   }

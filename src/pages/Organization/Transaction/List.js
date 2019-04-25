@@ -1,16 +1,17 @@
-import React, { PureComponent } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, Table } from 'antd';
 import { formatMessage } from 'umi/locale';
 import { fetchTransactions } from '@/services/api';
+import usePromise from '@/utils/usePromise';
 import moment from 'moment';
 
-class List extends PureComponent {
-  state = {
-    dataSource: [],
-    loading: false,
-  };
-
-  columns = [
+function List(props) {
+  const {
+    match: {
+      params: { namespace },
+    },
+  } = props;
+  const columns = [
     {
       title: 'ID',
       key: 'id',
@@ -37,34 +38,32 @@ class List extends PureComponent {
       render: (_, record) => moment(record.timestamp * 1000).format('YYYY-MM-DD hh:mm:ss'),
     },
   ];
+  const request = function request() {
+    return fetchTransactions(namespace);
+  };
+  const { fetchUser, loading } = usePromise(request);
+  const [dataSource, setDataSource] = useState([]);
 
-  componentDidMount () {
-    this.setState({
-      loading: true,
+  useEffect(() => {
+    fetchUser().then(data => {
+      setDataSource(
+        data.map(item => ({
+          key: item.transaction_id,
+          id: item.transaction_id,
+          name: formatMessage({ id: `spec.transaction-${item.action}` }),
+          amount: `${item.balance_after - item.balance_before} DFT`,
+          timestamp: item.timestamp,
+          state: formatMessage({ id: 'spec.transaction-success' }),
+        }))
+      );
     });
+  }, []);
 
-    const { match: { params: { namespace } } } = this.props;
-    fetchTransactions(namespace).then((data) => this.setState({
-      dataSource: data.map((item) => ({
-        key: item.transaction_id,
-        id: item.transaction_id,
-        name: formatMessage({ id: `spec.transaction-${item.action}` }),
-        amount: `${item.balance_after - item.balance_before} DFT`,
-        timestamp: item.timestamp,
-        state: formatMessage({ id: 'spec.transaction-success' }),
-      })),
-    })).finally(() => this.setState({
-      loading: false,
-    }));
-  }
-
-  render () {
-    const { dataSource, loading } = this.state;
-    return (
-      <Card title={formatMessage({ id: 'menu.transactions' })}>
-        <Table columns={this.columns} dataSource={dataSource} loading={loading} />
-      </Card>);
-  }
+  return (
+    <Card title={formatMessage({ id: 'menu.transactions' })}>
+      <Table columns={columns} dataSource={dataSource} loading={loading} />
+    </Card>
+  );
 }
 
 export default List;

@@ -1,14 +1,11 @@
-import React, { PureComponent } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, Table } from 'antd';
-import { connect } from 'dva';
+import { fetchResponses } from '@/services/api';
+import usePromise from '@/utils/usePromise';
 import moment from 'moment';
 
-@connect(({ loading, responses }) => ({
-  loading: loading.effects['responses/fetch'],
-  responses,
-}))
-class List extends PureComponent {
-  columns = [
+function List(props) {
+  const columns = [
     {
       title: '订单号',
       dataIndex: 'offer_id',
@@ -31,12 +28,13 @@ class List extends PureComponent {
     },
     {
       title: '请求状态',
-      render: (_, record) => record.responed_at ? '成功' : '失败',
+      render: (_, record) => (record.responed_at ? '成功' : '失败'),
       key: 'state',
     },
     {
       title: '响应时间',
-      render: (_, record) => record.responed_at ? moment(record.responed_at * 1000).format('YYYY-MM-DD hh:mm:ss') : '-',
+      render: (_, record) =>
+        record.responed_at ? moment(record.responed_at * 1000).format('YYYY-MM-DD hh:mm:ss') : '-',
       key: 'response-time',
     },
     {
@@ -45,36 +43,29 @@ class List extends PureComponent {
       key: 'transaction-amount',
     },
   ];
+  const { match } = props;
+  const request = function request() {
+    return fetchResponses(match.params.namespace);
+  };
+  const { fetchUser, loading } = usePromise(request);
+  const [dataSource, setDataSource] = useState([]);
 
-  componentDidMount () {
-    const { dispatch, match } = this.props;
-    dispatch({
-      type: 'responses/fetch',
-      payload: {
-        namespace: match.params.namespace,
-      },
+  useEffect(() => {
+    fetchUser().then(data => {
+      setDataSource(data);
     });
-  }
+  }, []);
 
-  componentWillUnmount () {
-    const { dispatch } = this.props;
-    dispatch({
-      type: 'responses/clear'
-    });
-  }
-
-  render () {
-    const { responses, loading } = this.props;
-    return (
-      <Card title="响应记录">
-        <Table
-          columns={this.columns}
-          dataSource={responses.responses}
-          loading={loading}
-          rowKey={record => record.offer_id}
-        />
-      </Card>);
-  }
+  return (
+    <Card title="响应记录">
+      <Table
+        columns={columns}
+        dataSource={dataSource}
+        loading={loading}
+        rowKey={record => record.offer_id}
+      />
+    </Card>
+  );
 }
 
 export default List;

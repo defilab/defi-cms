@@ -1,15 +1,12 @@
-import React, { Fragment, PureComponent } from 'react';
+import React, { Fragment, useEffect, useState } from 'react';
 import { Card, Divider, Table } from 'antd';
 import Link from 'umi/link';
-import { connect } from 'dva';
+import { fetchDataSpecs } from '@/services/api';
+import usePromise from '@/utils/usePromise';
 import moment from 'moment';
 
-@connect(({ dataSpecs, loading }) => ({
-  dataSpecs,
-  loading: loading.effects['dataSpecs/fetch'],
-}))
-class List extends PureComponent {
-  columns = [
+function List(props) {
+  const columns = [
     {
       title: '#',
       dataIndex: 'id',
@@ -37,7 +34,7 @@ class List extends PureComponent {
     },
     {
       title: '公开',
-      render: (_, record) => record.public ? '公开' : '私有',
+      render: (_, record) => (record.public ? '公开' : '私有'),
       key: 'public',
     },
     {
@@ -46,35 +43,37 @@ class List extends PureComponent {
         <Fragment>
           <Link to={`/organizations/${record.namespace}/specs/${record.canonical_name}`}>查看</Link>
           <Divider type="vertical" />
-          <Link to={`/organizations/${record.namespace}/specs/${record.canonical_name}/edit`}>编辑</Link>
+          <Link to={`/organizations/${record.namespace}/specs/${record.canonical_name}/edit`}>
+            编辑
+          </Link>
         </Fragment>
       ),
       key: 'operations',
     },
   ];
 
-  componentDidMount () {
-    const { dispatch, match } = this.props;
-    dispatch({
-      type: 'dataSpecs/fetch',
-      payload: { namespace: match.params.namespace },
-    });
-  }
+  const { match } = props;
+  const request = function request() {
+    return fetchDataSpecs(match.params.namespace);
+  };
+  const { fetchUser, loading } = usePromise(request);
+  const [dataSpecs, setDataSpecs] = useState([]);
 
-  componentWillUnmount () {
-    const { dispatch } = this.props;
-    dispatch({
-      type: 'dataSpecs/clear',
+  useEffect(() => {
+    fetchUser().then(data => {
+      setDataSpecs(data);
     });
-  }
-
-  render () {
-    const { dataSpecs: { dataSpecs }, loading } = this.props;
-    return (
-      <Card title="数据接口">
-        <Table columns={this.columns} dataSource={dataSpecs} loading={loading} rowKey={record => record.id} />
-      </Card>);
-  }
+  }, []);
+  return (
+    <Card title="数据接口">
+      <Table
+        columns={columns}
+        dataSource={dataSpecs}
+        loading={loading}
+        rowKey={record => record.id}
+      />
+    </Card>
+  );
 }
 
 export default List;
